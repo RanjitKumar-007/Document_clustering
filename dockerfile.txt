@@ -1,0 +1,40 @@
+FROM python:3.10-slim
+
+# Set Working Directory
+WORKDIR /app
+
+# Prevent Python from writing .pyc files and enable unbuffered logs
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Install System Dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Requirements First for Better Docker Cache
+COPY requirements.txt .
+
+# Upgrade pip and Install Python Dependencies
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Create Non-Root User
+RUN useradd --create-home appuser
+
+# Copy Project Files with Ownership
+COPY --chown=appuser:appuser . .
+
+# Create Required Directories
+RUN mkdir -p \
+    documents \
+    categories \
+    logs \
+    metadata && \
+    chown -R appuser:appuser /app
+
+# Switch to Non-Root User
+USER appuser
+
+# Run Application
+CMD ["python", "main.py"]
